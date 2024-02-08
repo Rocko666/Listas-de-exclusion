@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -53,7 +52,6 @@ try:
     print(etq_info(msg_d_duracion_ejecucion(vSStep, vle_duracion(ts_step, te_step))))
 except Exception as e:
     exit(etq_error(msg_e_ejecucion(vSStep, str(e))))
-
 
 print(lne_dvs())
 vSStep = '[Paso 2]: Configuracion Spark Session'
@@ -136,7 +134,7 @@ try:
     ts_step = datetime.now()  
     print(lne_dvs())
 
-    vSQL = q_obtener_identificadores_base_consentimiento()
+    vSQL = q_obtener_identificadores_base_consentimiento(FECHA_EJECUCION)
     print(etq_sql(vSQL))
     base_consentimiento = spark.sql(vSQL)
     base_consentimiento = base_consentimiento.dropDuplicates(["num_celular", "identificador"])
@@ -146,7 +144,6 @@ try:
     else:
         vIRows = base_consentimiento.count()
         print(etq_info(msg_t_total_registros_obtenidos('base_consentimiento', str(vIRows))))
-
         base_consentimiento.repartition(1).write.format("parquet").mode("overwrite").saveAsTable("{}.identificadores_base_consentimiento_exc".format(vSChemaTmp))
 
     te_step = datetime.now()
@@ -225,9 +222,12 @@ print(lne_dvs())
 try:
     ts_step = datetime.now()  
     print(lne_dvs())
-
-    exclusion_campanias = lista_negra.union(base_consentimiento)
-    exclusion_campanias = exclusion_campanias.dropDuplicates(["num_celular", "identificador"])
+    registros_repetidos = spark.sql(q_registros_repetidos(vSChemaTmp))
+    registros_repetidos.createOrReplaceTempView("registros_repetidos")
+    print("Registros en Lista Negra y Base Consentimiento:")
+    registros_repetidos.show()
+    lista_negra_sin_repetidos = spark.sql(q_lista_negra_sr(vSChemaTmp))
+    exclusion_campanias = lista_negra_sin_repetidos.union(base_consentimiento)
 
     FECHA_EJECUCION_FORMATEADA = datetime.strptime(str(FECHA_EJECUCION), '%Y%m%d').strftime("%d/%m/%Y")
     exclusion_campanias = exclusion_campanias.withColumn("fecha_proceso", lit(FECHA_EJECUCION_FORMATEADA))
@@ -245,7 +245,6 @@ try:
 except Exception as e:
     exit(etq_error(msg_e_ejecucion(vSStep, str(e))))
 print(lne_dvs())
-
 
 print(lne_dvs())
 spark.stop()

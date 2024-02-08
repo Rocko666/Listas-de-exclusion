@@ -16,8 +16,8 @@ set -e
 #------------------------------------------------------
 FECHA_EJECUCION=$1
 
-ENTIDAD=XCLSNCMPNS0010
-AMBIENTE=1 # AMBIENTE (1=produccion, 0=desarrollo)
+ENTIDAD=D_XCLSNCMPNS0010
+AMBIENTE=0 # AMBIENTE (1=produccion, 0=desarrollo)
 
 if [ $AMBIENTE -gt 0 ]; then
     TABLA=params
