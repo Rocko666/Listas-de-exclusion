@@ -14,10 +14,10 @@ set -e
 #------------------------------------------------------
 # PARAMETROS DE LA SHELL
 #------------------------------------------------------
-FECHA_EJECUCION=$1
+VAL_FECHA_EJECUCION=$1
 
-ENTIDAD=D_XCLSNCMPNS0010
-AMBIENTE=0 # AMBIENTE (1=produccion, 0=desarrollo)
+ENTIDAD=XCLSNCMPNS0010
+AMBIENTE=1 # AMBIENTE (1=produccion, 0=desarrollo)
 
 if [ $AMBIENTE -gt 0 ]; then
     TABLA=params
@@ -49,13 +49,13 @@ $VAL_KINIT
 # PARAMETROS CALCULADO
 #------------------------------------------------------
 ini_fecha=$(date '+%Y%m%d%H%M%S')
-FECHA_EJECUCION_ANTERIOR=$(date '+%Y%m%d' -d "$FECHA_EJECUCION-1 day")
+VAL_FECHA_EJECUCION_ANTERIOR=$(date '+%Y%m%d' -d "$VAL_FECHA_EJECUCION-1 day")
 VAL_LOG=$VAL_RUTA/log/exclusion_campanias_$ini_fecha.log
 
 #------------------------------------------------------
 # VALIDACION DE PARAMETROS
 #------------------------------------------------------
-if [ -z "$FECHA_EJECUCION" ] ||
+if [ -z "$VAL_FECHA_EJECUCION" ] ||
     [ -z "$VAL_RUTA" ] ||
     [ -z "$VAL_ESQUEMA" ] ||
     [ -z "$VAL_ESQUEMA_TMP" ] ||
@@ -75,7 +75,7 @@ fi
 #------------------------------------------------------
 # IMPRESION PARAMETROS
 #------------------------------------------------------
-echo "FECHA_EJECUCION: $FECHA_EJECUCION" >>$VAL_LOG
+echo "VAL_FECHA_EJECUCION: $VAL_FECHA_EJECUCION" >>$VAL_LOG
 echo "VAL_RUTA: $VAL_RUTA" >>$VAL_LOG
 echo "VAL_ESQUEMA: $VAL_ESQUEMA" >>$VAL_LOG
 echo "VAL_ESQUEMA_TMP: $VAL_ESQUEMA_TMP" >>$VAL_LOG
@@ -87,7 +87,7 @@ echo "VAL_EXECUTOR_MEMORY: $VAL_EXECUTOR_MEMORY" >>$VAL_LOG
 echo "VAL_NUM_EXECUTORS: $VAL_NUM_EXECUTORS" >>$VAL_LOG
 echo "VAL_NUM_EXECUTORS_CORES: $VAL_NUM_EXECUTORS_CORES" >>$VAL_LOG
 echo "VAL_KINIT: $VAL_KINIT" >>$VAL_LOG
-echo "FECHA_EJECUCION_ANTERIOR: $FECHA_EJECUCION_ANTERIOR" >>$VAL_LOG
+echo "VAL_FECHA_EJECUCION_ANTERIOR: $VAL_FECHA_EJECUCION_ANTERIOR" >>$VAL_LOG
 echo "VAL_LOG: $VAL_LOG" >>$VAL_LOG
 
 #------------------------------------------------------
@@ -106,7 +106,7 @@ $VAL_RUTA_SPARK \
     --vSEntidad=$ENTIDAD \
     --vSChema=$VAL_ESQUEMA \
     --vSChemaTmp=$VAL_ESQUEMA_TMP \
-    --FECHA_EJECUCION=$FECHA_EJECUCION \
-    --FECHA_EJECUCION_ANTERIOR=$FECHA_EJECUCION_ANTERIOR 2>&1 &>> $VAL_LOG
+    --vFechaEje=$VAL_FECHA_EJECUCION \
+    --vFechaEjeAnterior=$VAL_FECHA_EJECUCION_ANTERIOR 2>&1 &>> $VAL_LOG
 
 echo "==== FIN PROCESO EXCLUSION CAMPANIAS ====" >>$VAL_LOG

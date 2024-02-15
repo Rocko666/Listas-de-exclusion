@@ -2,16 +2,12 @@
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
-
 import os
 import argparse
-from datetime import datetime
-
+from datetime import datetime, timedelta
 from pyspark.sql.functions import col, lit, desc
 from pyspark.sql import SparkSession
-
 from query import *
-
 sys.path.insert(1, '/var/opt/tel_spark')
 from messages import *
 from functions import *
@@ -29,15 +25,15 @@ try:
     parser.add_argument('--vSEntidad', required=True, type=str, help='Entidad del proceso')
     parser.add_argument('--vSChema', required=True, type=str, help='')
     parser.add_argument('--vSChemaTmp', required=True, type=str, help='')
-    parser.add_argument('--FECHA_EJECUCION', required=True, type=str, help='')
-    parser.add_argument('--FECHA_EJECUCION_ANTERIOR', required=True, type=str, help='')
+    parser.add_argument('--vFechaEje', required=True, type=str, help='')
+    parser.add_argument('--vFechaEjeAnterior', required=True, type=str, help='')
     
     parametros = parser.parse_args()
     vSEntidad = parametros.vSEntidad
     vSChema = parametros.vSChema
     vSChemaTmp = parametros.vSChemaTmp
-    FECHA_EJECUCION = parametros.FECHA_EJECUCION
-    FECHA_EJECUCION_ANTERIOR = parametros.FECHA_EJECUCION_ANTERIOR
+    vFechaEje = parametros.vFechaEje
+    vFechaEjeAnterior = parametros.vFechaEjeAnterior
 
     print(lne_dvs())
     print(etq_info("Imprimiendo parametros..."))
@@ -45,8 +41,8 @@ try:
     print(etq_info(log_p_parametros("vSEntidad", str(vSEntidad))))
     print(etq_info(log_p_parametros("vSChema", str(vSChema))))
     print(etq_info(log_p_parametros("vSChemaTmp", str(vSChemaTmp))))
-    print(etq_info(log_p_parametros("FECHA_EJECUCION", str(FECHA_EJECUCION))))
-    print(etq_info(log_p_parametros("FECHA_EJECUCION_ANTERIOR", str(FECHA_EJECUCION_ANTERIOR))))
+    print(etq_info(log_p_parametros("vFechaEje", str(vFechaEje))))
+    print(etq_info(log_p_parametros("vFechaEjeAnterior", str(vFechaEjeAnterior))))
 
     te_step = datetime.now()
     print(etq_info(msg_d_duracion_ejecucion(vSStep, vle_duracion(ts_step, te_step))))
@@ -133,8 +129,20 @@ print(lne_dvs())
 try:
     ts_step = datetime.now()  
     print(lne_dvs())
-
-    vSQL = q_obtener_identificadores_base_consentimiento(FECHA_EJECUCION)
+    # se implementa este codigo para traer la ultima fecha y que el proceso
+    # no traiga cero registros en base consentimiento
+    fecha_resultante = datetime.strptime(vFechaEje, '%Y%m%d')
+    fecha_resultante = fecha_resultante - timedelta(days=3)
+    fecha_resultante = fecha_resultante.strftime('%Y%m%d')
+    partitions = spark.sql("SHOW PARTITIONS "+"db_cs_altas.otc_t_prq_glb_bi")
+    listpartitions = list(partitions.select('partition').toPandas()['partition'])
+    cleanpartitions = [ i.split('=')[1] for i in listpartitions]
+    cleanpartitions = [ i.split('/')[0] for i in cleanpartitions]
+    filtered = [i for i in cleanpartitions if i >= str(fecha_resultante) and i <= str(vFechaEje)]
+    print(filtered)
+    fecha_particion=max(filtered)
+    print(fecha_particion)
+    vSQL = q_obtener_identificadores_base_consentimiento(fecha_particion)
     print(etq_sql(vSQL))
     base_consentimiento = spark.sql(vSQL)
     base_consentimiento = base_consentimiento.dropDuplicates(["num_celular", "identificador"])
@@ -162,13 +170,13 @@ try:
     print(lne_dvs())
 
     try:
-        vSQL = q_obtener_numeros_movi_parque(FECHA_EJECUCION)
+        vSQL = q_obtener_numeros_movi_parque(vFechaEje)
         print(etq_sql(vSQL))
         movi_parque = spark.sql(vSQL)
     except Exception as e:
         exit(etq_error(msg_e_ejecucion(vSStep, str(e))))
 
-        vSQL = q_obtener_numeros_movi_parque(FECHA_EJECUCION_ANTERIOR)
+        vSQL = q_obtener_numeros_movi_parque(vFechaEjeAnterior)
         print(etq_sql(vSQL))
         movi_parque = spark.sql(vSQL)    
 
@@ -229,8 +237,8 @@ try:
     lista_negra_sin_repetidos = spark.sql(q_lista_negra_sr(vSChemaTmp))
     exclusion_campanias = lista_negra_sin_repetidos.union(base_consentimiento)
 
-    FECHA_EJECUCION_FORMATEADA = datetime.strptime(str(FECHA_EJECUCION), '%Y%m%d').strftime("%d/%m/%Y")
-    exclusion_campanias = exclusion_campanias.withColumn("fecha_proceso", lit(FECHA_EJECUCION_FORMATEADA))
+    vFechaEjeFormat = datetime.strptime(str(vFechaEje), '%Y%m%d').strftime("%d/%m/%Y")
+    exclusion_campanias = exclusion_campanias.withColumn("fecha_proceso", lit(vFechaEjeFormat))
 
     if exclusion_campanias.limit(1).count <= 0:    
         exit(etq_nodata(msg_e_df_nodata(str('exclusion_campanias'))))
