@@ -37,8 +37,9 @@ def q_obtener_identificadores_base_consentimiento(FECHA_EJECUCION):
         and p.fecha_proceso={FECHA_EJECUCION}
     WHERE
         a.FECHAFIN IS NULL
-        AND a.TOGGLE = 'NO'
-        AND a.SUBPROPOSITOTRATAMIENTO NOT IN ('CD-CC','AP-PGRT')
+        AND (ID_SUBPROPOSITO like 'CC%' --subpropositos de comunicacion comercial solicitada ono y relacionada o no con los servicios Otecel
+        or ID_SUBPROPOSITO like 'C-%')
+        AND a.TOGGLE in('NO','1')
     """.format(FECHA_EJECUCION=FECHA_EJECUCION)
     return qry
 
